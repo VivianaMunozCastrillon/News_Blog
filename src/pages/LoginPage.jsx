@@ -1,21 +1,20 @@
-import React, { useState } from "react";
+import React, { useState } from "react"; 
 import LoginForm from "../components/LoginForm";
 import Alert from "../components/Alert";
 import Spinner from "../components/Spinner";
 import { useNavigate } from "react-router-dom";
-// Backend real
-//import { loginUser, registerUser } from "../services/auth";
-
-// Backend falso (mock)
-import { loginUser, registerUser } from "../services/auth.mock";
+import { loginUser, registerUser } from "../services/auth";
+import { UserAuth } from "../context/AuthContext";
+import { FcGoogle } from "react-icons/fc";
 
 function LoginPage() {
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState(""); // success | error | info
+  const [messageType, setMessageType] = useState(""); 
   const [loading, setLoading] = useState(false);
 
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
+  const { signInWithGoogle } = UserAuth();
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -35,7 +34,7 @@ function LoginPage() {
         setMessageType("success");
         localStorage.setItem("token", data.token);
 
-        // Redirigir a homepage
+        // Redirigir a homepage 
         navigate("/");
       } else {
         // REGISTRO
@@ -52,7 +51,6 @@ function LoginPage() {
         setMessage(`${data.message}`);
         setMessageType("success");
 
-        // Redirigir a homepage
         navigate("/");
       }
     } catch (error) {
@@ -63,19 +61,44 @@ function LoginPage() {
     }
   }
 
+  async function handleGoogleSignIn() {
+    try {
+      await signInWithGoogle();
+      navigate("/"); 
+    } catch (error) {
+      setMessage(error.message);
+      setMessageType("error");
+    }
+  }
+
   return (
-    <div className="h-screen flex justify-center items-center bg-gradient-to-b from-[#4a0d36] via-[#a0236f] to-[#d63384] bg-[url('./assets/FondoLogin.png')] bg-cover bg-center">
-      <div className="flex flex-col justify-center items-center">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#4a0d36] via-[#a0236f] to-[#d63384] bg-[url('./assets/FondoLogin.png')] bg-cover bg-center">
+      <div className="w-full max-w-md px-4">
         <LoginForm
           isLoginMode={isLoginMode}
           setIsLoginMode={setIsLoginMode}
           onSubmit={handleSubmit}
-        />
+        >
+          <div className="flex items-center my-4">
+            <div className="flex-grow h-px bg-gray-300"></div>
+            <span className="px-3 text-gray-500 text-sm">o</span>
+            <div className="flex-grow h-px bg-gray-300"></div>
+          </div>
 
-        <div className="w-full max-w-md mt-4 text-center">
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            className="flex items-center justify-center gap-2 w-full bg-white text-gray-700 py-2 rounded-full shadow hover:bg-gray-100 transition text-sm"
+          >
+            <FcGoogle size={20} />
+            <span>Continuar con Google</span>
+          </button>
+        </LoginForm>
+
+        <div className="w-full max-w-md mt-3 text-center">
           {loading && (
             <div className="flex justify-center">
-              <Spinner size="w-8 h-8" color="border-pink-500" />
+              <Spinner size="w-6 h-6" color="border-pink-500" />
             </div>
           )}
           <Alert
@@ -89,6 +112,5 @@ function LoginPage() {
     </div>
   );
 }
-
 
 export default LoginPage;
