@@ -1,14 +1,18 @@
 import { Routes, Route } from "react-router-dom";
 import LoginPage from "../pages/LoginPage";
-import HomePage from "../pages/HomePage";
-import RegisterPage from "../pages/RegisterPage";
+
+
+import NewsPage from "../pages/NewsPage";
+import NewsDetailPage from "../pages/NewsDetailPage";
+
 
 export function MyRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<HomePage />} />
+      <Route path="/" element={<NewsPage />} />
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/news/:id" element={<NewsDetailPage />} />
+
     </Routes>
   );
 }

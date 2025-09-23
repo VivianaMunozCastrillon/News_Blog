@@ -6,6 +6,7 @@ const AuthContext = createContext();
 export const AuthContextProvider = ({ children }) => {
   const [user, setUser] = useState(null);
 
+  // --- LOGIN CON GOOGLE ---
   async function signInWithGoogle() {
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -19,14 +20,46 @@ export const AuthContextProvider = ({ children }) => {
     }
   }
 
+  // --- REGISTRO FLEXIBLE CON EMAIL/PASSWORD Y METADATA ---
+  async function registerWithEmail(email, password, metadata = {}) {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: metadata }, // Aquí enviamos toda la metadata
+      });
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Error al registrarse:", error.message);
+      throw error;
+    }
+  }
+
+  // --- LOGIN CON EMAIL Y CONTRASEÑA ---
+  async function loginWithEmail(email, password) {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Error al iniciar sesión:", error.message);
+      throw error;
+    }
+  }
+
+  // --- CERRAR SESIÓN ---
   async function signout() {
     const { error } = await supabase.auth.signOut();
     if (error) throw new Error("Ocurrió un error durante el cierre de sesión");
     setUser(null);
   }
 
+  // --- DETECTAR CAMBIOS DE SESIÓN ---
   useEffect(() => {
-    // Obtener sesión inicial
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
@@ -35,7 +68,6 @@ export const AuthContextProvider = ({ children }) => {
     };
     getSession();
 
-    // Escuchar cambios de sesión
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session) {
@@ -52,7 +84,13 @@ export const AuthContextProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ signInWithGoogle, signout, user }}>
+    <AuthContext.Provider value={{
+      user,
+      signInWithGoogle,
+      registerWithEmail,
+      loginWithEmail,
+      signout
+    }}>
       {children}
     </AuthContext.Provider>
   );

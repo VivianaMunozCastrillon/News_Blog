@@ -3,7 +3,6 @@ import LoginForm from "../components/LoginForm";
 import Alert from "../components/Alert";
 import Spinner from "../components/Spinner";
 import { useNavigate } from "react-router-dom";
-import { loginUser, registerUser } from "../services/auth";
 import { UserAuth } from "../context/AuthContext";
 import { FcGoogle } from "react-icons/fc";
 
@@ -14,7 +13,7 @@ function LoginPage({ defaultToRegister = false }) {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
-  const { signInWithGoogle } = UserAuth();
+  const { signInWithGoogle, loginWithEmail, registerWithEmail } = UserAuth();
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -22,35 +21,31 @@ function LoginPage({ defaultToRegister = false }) {
     setLoading(true);
 
     const formData = new FormData(e.target);
+    const email = formData.get("email");
+    const password = formData.get("password");
+    const name = formData.get("name");
+    const lastname = formData.get("lastname");
 
+    //Autenticación nativa de Supabase (supabase.auth)
     try {
       if (isLoginMode) {
         // LOGIN
-        const data = await loginUser(
-          formData.get("email"),
-          formData.get("password")
-        );
-        setMessage(`Bienvenido ${data.user.name}`);
+        await loginWithEmail(email, password);
+        setMessage(`Bienvenido ${email}`);
         setMessageType("success");
-        localStorage.setItem("token", data.token);
-
-        // Redirigir a homepage 
         navigate("/");
       } else {
         // REGISTRO
-        if (formData.get("password") !== formData.get("confirmPassword")) {
+        if (password !== formData.get("confirmPassword")) {
           setMessage("Las contraseñas no coinciden");
           setMessageType("error");
           return;
         }
-        const data = await registerUser(
-          formData.get("name"),
-          formData.get("email"),
-          formData.get("password")
-        );
-        setMessage(`${data.message}`);
-        setMessageType("success");
 
+        // Registro con metadata
+        await registerWithEmail(email, password, { name, lastname });
+        setMessage("Usuario registrado correctamente");
+        setMessageType("success");
         navigate("/");
       }
     } catch (error) {
