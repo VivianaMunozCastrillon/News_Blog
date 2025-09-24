@@ -1,22 +1,27 @@
 import React, { useEffect, useState } from "react";
-import NewsList from "../components/NewsList";
-import Spinner from "../components/Spinner";
 import { supabase } from "../supabase/supabaseClient";
-import { Link } from "react-router-dom";
+import Navbar from "../components/Navbar";
+import Spinner from "../components/Spinner";
+import NewsList from "../components/NewsList";
+import CtaBanner from "../components/CtaBanner";
+import FactCard from "../components/FactCard";
 
 function NewsPage() {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
-  // Obtener noticias desde Supabase
+  const handleCategorySelect = (categoryName) => {
+    setSelectedCategory(categoryName);
+  };
+
   useEffect(() => {
     async function fetchNews() {
       try {
         const { data, error } = await supabase
           .from("news_article")
-          .select("*")
+          .select(`*, category:category(name)`)
           .order("created_at", { ascending: false });
-
         if (error) throw error;
         setNews(data);
       } catch (err) {
@@ -25,34 +30,47 @@ function NewsPage() {
         setLoading(false);
       }
     }
+
     fetchNews();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <Spinner />
-      </div>
-    );
-  }
+  const filteredNews = selectedCategory
+    ? news.filter((n) => n.category?.name === selectedCategory)
+    : news;
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <Link
-        to="/login"
-        className="bg-pink-600 text-white px-6 py-3 rounded-lg hover:bg-pink-700 transition"
-      >
-        Iniciar Sesión
-      </Link>
-      <h1 className="text-2xl font-bold text-gray-800 p-4">Noticias</h1>
+    <div className="w-full min-h-screen bg-gray-50">
+      {/* Navbar */}
+      <Navbar onCategorySelect={handleCategorySelect} />
 
-      {news.length > 0 ? (
-        <NewsList news={news} />
+      {/* CTA Banner */}
+      <div className="mt-6">
+        <CtaBanner />
+      </div>
+
+      {/* Fact Card */}
+      <div className="mt-6">
+        <FactCard />
+      </div>
+
+      {/* Título de noticias */}
+      <h1 className="text-2xl font-bold text-gray-800 p-4">
+        Noticias {selectedCategory ? `- ${selectedCategory}` : ""}
+      </h1>
+
+      {/* Contenido de noticias */}
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <Spinner />
+        </div>
+      ) : filteredNews.length > 0 ? (
+        <NewsList news={filteredNews} />
       ) : (
         <p className="text-center text-gray-500">No hay noticias disponibles.</p>
       )}
     </div>
   );
 }
+
 
 export default NewsPage;
