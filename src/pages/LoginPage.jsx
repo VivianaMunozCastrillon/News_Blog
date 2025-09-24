@@ -59,7 +59,7 @@ function LoginPage({ defaultToRegister = false }) {
   async function handleGoogleSignIn() {
     try {
       await signInWithGoogle();
-      navigate("/"); 
+      //navigate("/"); 
     } catch (error) {
       setMessage(error.message);
       setMessageType("error");
