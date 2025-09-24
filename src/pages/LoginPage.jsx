@@ -7,8 +7,8 @@ import { loginUser, registerUser } from "../services/auth";
 import { UserAuth } from "../context/AuthContext";
 import { FcGoogle } from "react-icons/fc";
 
-function LoginPage() {
-  const [isLoginMode, setIsLoginMode] = useState(true);
+function LoginPage({ defaultToRegister = false }) {
+  const [isLoginMode, setIsLoginMode] = useState(!defaultToRegister);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState(""); 
   const [loading, setLoading] = useState(false);
