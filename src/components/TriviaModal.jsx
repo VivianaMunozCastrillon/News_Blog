@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase/supabaseClient';
+import { CgClose } from 'react-icons/cg';
 
 const TriviaModal = ({ newsId, onClose }) => {
   const [trivia, setTrivia] = useState(null);
@@ -70,7 +71,10 @@ const TriviaModal = ({ newsId, onClose }) => {
   if (!trivia || questions.length === 0) {
     return (
       <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex justify-center items-center z-50">
-        <div className="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full text-center">
+        <div className="relative bg-white p-8 rounded-lg shadow-2xl max-w-md w-full text-center">
+            <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800">
+                <CgClose size={24} />
+            </button>
             <p className="text-gray-700">No hay trivia disponible para esta noticia.</p>
             <button onClick={onClose} className="mt-4 px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400">
                 Cerrar
@@ -84,7 +88,10 @@ const TriviaModal = ({ newsId, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex justify-center items-center z-50">
-      <div className="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full">
+      <div className="relative bg-white p-8 rounded-lg shadow-2xl max-w-md w-full">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800">
+          <CgClose size={24} />
+        </button>
         {!showResult ? (
           <div>
             <h2 className="text-2xl font-bold mb-4 text-gray-800">{trivia.title}</h2>

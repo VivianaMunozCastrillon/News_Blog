@@ -1,12 +1,43 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useMemo } from "react";
 import { supabase } from "../supabase/supabaseClient.js";
 
 const AuthContext = createContext();
 
 export const AuthContextProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // --- LOGIN CON GOOGLE ---
+  useEffect(() => {
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      setLoading(false);
+    };
+
+    getSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null);
+        if (event === 'INITIAL_SESSION') {
+          setLoading(false);
+        }
+      }
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const value = useMemo(() => ({
+    user,
+    signInWithGoogle,
+    registerWithEmail,
+    loginWithEmail,
+    signout
+  }), [user]);
+
   async function signInWithGoogle() {
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -20,13 +51,12 @@ export const AuthContextProvider = ({ children }) => {
     }
   }
 
-  // --- REGISTRO FLEXIBLE CON EMAIL/PASSWORD Y METADATA ---
   async function registerWithEmail(email, password, metadata = {}) {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: metadata }, // Aquí enviamos toda la metadata
+        options: { data: metadata },
       });
       if (error) throw error;
       return data;
@@ -36,7 +66,6 @@ export const AuthContextProvider = ({ children }) => {
     }
   }
 
-  // --- LOGIN CON EMAIL Y CONTRASEÑA ---
   async function loginWithEmail(email, password) {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -51,47 +80,15 @@ export const AuthContextProvider = ({ children }) => {
     }
   }
 
-  // --- CERRAR SESIÓN ---
   async function signout() {
     const { error } = await supabase.auth.signOut();
     if (error) throw new Error("Ocurrió un error durante el cierre de sesión");
     setUser(null);
   }
 
-  // --- DETECTAR CAMBIOS DE SESIÓN ---
-  useEffect(() => {
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setUser(session.user.user_metadata);
-      }
-    };
-    getSession();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session) {
-          setUser(session.user.user_metadata);
-        } else {
-          setUser(null);
-        }
-      }
-    );
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
-
   return (
-    <AuthContext.Provider value={{
-      user,
-      signInWithGoogle,
-      registerWithEmail,
-      loginWithEmail,
-      signout
-    }}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 };

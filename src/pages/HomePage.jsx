@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import TriviaModal from "../components/TriviaModal";
 import { supabase } from "../supabase/supabaseClient";
+import { UserAuth } from "../context/AuthContext";
 
 const HomePage = () => {
+  const { user } = UserAuth();
   const [latestNews, setLatestNews] = useState(null);
   const [isTriviaOpen, setIsTriviaOpen] = useState(false);
 
@@ -45,6 +47,11 @@ const HomePage = () => {
     <div className="bg-gray-50 min-h-screen">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
+        <div style={{ position: 'fixed', top: 0, left: 0, backgroundColor: 'white', padding: '10px', zIndex: 9999, border: '1px solid black' }}>
+          <h3 style={{ fontWeight: 'bold' }}>Debugging Info:</h3>
+          <pre>{JSON.stringify(user, null, 2)}</pre>
+        </div>
+
         <div className="text-center">
           <h1 className="text-4xl font-extrabold text-gray-900 mb-4">Bienvenido a Notiplay</h1>
           <p className="text-lg text-gray-600 mb-8">Tu fuente de noticias y trivias interactivas.</p>
