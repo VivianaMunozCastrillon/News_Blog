@@ -1,18 +1,20 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabase/supabaseClient";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function FactCard() {
-  const [fact, setFact] = useState(null);
+  const [facts, setFacts] = useState([]); // lista de datos curiosos
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchFact = async () => {
+    const fetchFacts = async () => {
       try {
         const { data, error } = await supabase
           .from("fun_fact")
           .select("*")
-          .eq("is_active", true); // Traer solo los datos activos
+          .eq("is_active", true);
 
         if (error) {
           setError("Error al traer datos curiosos");
@@ -27,9 +29,7 @@ export default function FactCard() {
           return;
         }
 
-        // Elegir un dato curioso aleatorio
-        const randomFact = data[Math.floor(Math.random() * data.length)];
-        setFact(randomFact);
+        setFacts(data);
       } catch (err) {
         console.error(err);
         setError("Ocurrió un error inesperado");
@@ -38,8 +38,18 @@ export default function FactCard() {
       }
     };
 
-    fetchFact();
+    fetchFacts();
   }, []);
+
+  // Rotar automáticamente cada 10 segundos
+  useEffect(() => {
+    if (facts.length > 0) {
+      const interval = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % facts.length);
+      }, 10000); // 👈 ahora cambia cada 10s
+      return () => clearInterval(interval);
+    }
+  }, [facts]);
 
   if (loading) {
     return (
@@ -60,7 +70,19 @@ export default function FactCard() {
   return (
     <div className="bg-white p-4 rounded shadow-md mb-6">
       <h2 className="font-bold mb-2">¿Sabías que?</h2>
-      <p>{fact.content}</p>
+
+      {/* Animación de fade entre datos */}
+      <AnimatePresence mode="wait">
+        <motion.p
+          key={facts[currentIndex].id} // 👈 clave única para que haga fade al cambiar
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 3, ease: "easeInOut" }} // 👈 fade lento (3s)
+        >
+          {facts[currentIndex].content}
+        </motion.p>
+      </AnimatePresence>
     </div>
   );
 }
