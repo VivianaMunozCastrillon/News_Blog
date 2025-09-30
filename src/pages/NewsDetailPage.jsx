@@ -5,6 +5,7 @@ import Spinner from "../components/Spinner";
 import TriviaModal from "../components/TriviaModal";
 import Navbar from "../components/Navbar";
 import { UserAuth } from "../context/AuthContext";
+import Alert from "../components/Alert"; // Importar Alert
 
 function NewsDetailPage() {
   const { id } = useParams();
@@ -15,6 +16,15 @@ function NewsDetailPage() {
   const [reactions, setReactions] = useState({});
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
+  const [notification, setNotification] = useState({ message: '', show: false, type: 'error' });
+
+  // Función para mostrar notificaciones y ocultarlas después de un tiempo
+  const showNotification = (message, type = 'error') => {
+    setNotification({ message, show: true, type });
+    setTimeout(() => {
+      setNotification({ message: '', show: false, type: 'error' });
+    }, 3000);
+  };
 
   async function fetchReactions() {
     const { data, error } = await supabase
@@ -67,7 +77,7 @@ function NewsDetailPage() {
 
   async function handleReaction(reactionType) {
     if (!user) {
-      alert("You must be logged in to react.");
+      showNotification("Debes iniciar sesión para reaccionar.");
       return;
     }
 
@@ -85,7 +95,7 @@ function NewsDetailPage() {
       console.error('Error adding reaction:', error);
       setReactions(prev => ({...prev, [reactionType]: prev[reactionType] - 1}));
       if (error.code !== '23505') {
-        alert("Error adding reaction.");
+        showNotification("Error al añadir la reacción.");
       }
     }
   }
@@ -93,10 +103,11 @@ function NewsDetailPage() {
   async function handleCommentSubmit(e) {
     e.preventDefault();
     if (!user) {
-        alert("You must be logged in to comment.");
+        showNotification("Debes iniciar sesión para comentar.");
         return;
     }
     if (!newComment.trim()) {
+        showNotification("El comentario no puede estar vacío.", "warning");
         return;
     }
 
@@ -120,7 +131,7 @@ function NewsDetailPage() {
     if (newCommentError) {
         console.error('Error adding comment:', newCommentError);
         setComments(prevComments => prevComments.filter(c => c.id !== tempId));
-        alert("Error adding comment.");
+        showNotification("Error al publicar el comentario.");
         return;
     }
 
@@ -134,9 +145,9 @@ function NewsDetailPage() {
     if (commentUserError) {
         console.error('Error linking comment to user:', commentUserError);
         setComments(prevComments => prevComments.filter(c => c.id !== tempId));
-        alert("Error adding comment.");
+        showNotification("Error al publicar el comentario.");
     } else {
-        fetchComments();
+        fetchComments(); // Recargar comentarios para mostrar el nuevo con datos reales
     }
   }
 
@@ -149,6 +160,12 @@ function NewsDetailPage() {
     <div className="w-full min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
       
+      {notification.show && (
+        <div className="fixed top-20 right-5 z-50">
+          <Alert message={notification.message} type={notification.type} />
+        </div>
+      )}
+
       <div className="flex-1 max-w-4xl mx-auto p-6">
         <h1 className="text-3xl font-bold mb-4">{news.title}</h1>
 

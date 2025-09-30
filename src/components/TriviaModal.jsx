@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase/supabaseClient';
 import { CgClose } from 'react-icons/cg';
+import { UserAuth } from '../context/AuthContext'; // Importar UserAuth
 
 const TriviaModal = ({ newsId, onClose }) => {
   const [trivia, setTrivia] = useState(null);
@@ -10,6 +11,46 @@ const TriviaModal = ({ newsId, onClose }) => {
   const [isCorrect, setIsCorrect] = useState(null);
   const [score, setScore] = useState(0);
   const [showResult, setShowResult] = useState(false);
+  const { user } = UserAuth(); // Obtener el usuario del contexto
+
+  // Función para guardar la puntuación en la base de datos
+  const saveScore = async (finalScore) => {
+    if (!user) {
+      console.log("Usuario no logueado. No se guardará la puntuación.");
+      return;
+    }
+
+    try {
+      // 1. Obtener la puntuación actual del usuario
+      const { data: userData, error: userError } = await supabase
+        .from('users') // Corregido a 'users'
+        .select('points')
+        .eq('id', user.id)
+        .single();
+
+      if (userError && userError.code !== 'PGRST116') { // PGRST116: a row was not found
+        throw userError;
+      }
+
+      const currentPoints = userData?.points || 0;
+      const newTotalPoints = currentPoints + finalScore;
+
+      // 2. Actualizar la puntuación
+      const { error: updateError } = await supabase
+        .from('users') // Corregido a 'users'
+        .update({ points: newTotalPoints })
+        .eq('id', user.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      console.log(`Puntuación guardada para ${user.id}. Nueva puntuación total: ${newTotalPoints}`);
+
+    } catch (error) {
+      console.error('Error al guardar la puntuación:', error.message);
+    }
+  };
 
   useEffect(() => {
     const fetchTrivia = async () => {
@@ -25,12 +66,10 @@ const TriviaModal = ({ newsId, onClose }) => {
         return;
       }
 
-      // If trivia exists for the news, set it and fetch its questions
       const currentTrivia = triviaData && triviaData.length > 0 ? triviaData[0] : null;
       setTrivia(currentTrivia);
 
       if (currentTrivia) {
-        // Fetch questions for that trivia
         const { data: questionsData, error: questionsError } = await supabase
           .from('trivia_question')
           .select('id, question_text, options, correct_option')
@@ -47,12 +86,19 @@ const TriviaModal = ({ newsId, onClose }) => {
     fetchTrivia();
   }, [newsId]);
 
+  // useEffect para guardar la puntuación cuando se muestran los resultados
+  useEffect(() => {
+    if (showResult && score > 0) {
+      saveScore(score);
+    }
+  }, [showResult]);
+
   const handleOptionSelect = (option) => {
     setSelectedOption(option);
     const currentQuestion = questions[currentQuestionIndex];
     if (option === currentQuestion.correct_option) {
       setIsCorrect(true);
-      setScore(score + 1);
+      setScore(prevScore => prevScore + 1);
     } else {
       setIsCorrect(false);
     }
@@ -131,6 +177,7 @@ const TriviaModal = ({ newsId, onClose }) => {
           <div className="text-center">
             <h2 className="text-3xl font-bold mb-4 text-gray-800">¡Trivia Completada!</h2>
             <p className="text-xl text-gray-700">Tu puntuación: <span className="font-bold text-blue-500">{score} / {questions.length}</span></p>
+            {user && <p className="text-md text-gray-600 mt-2">¡Puntos añadidos a tu perfil!</p>}
             <button onClick={onClose} className="mt-8 px-6 py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600">
               Cerrar
             </button>
