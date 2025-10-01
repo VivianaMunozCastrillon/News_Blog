@@ -54,18 +54,6 @@ function NewsDetailPage() {
   }
 
   useEffect(() => {
-    // Función para llamar al RPC que incrementa la vista
-    async function incrementViewCount() {
-      if (!id) return; // No hacer nada si no hay ID
-      const { error } = await supabase.rpc('increment_view_count', {
-        article_id: id,
-      });
-
-      if (error) {
-        console.error('Error incrementing view count:', error);
-      }
-    }
-
     async function fetchNews() {
       try {
         const { data, error } = await supabase
@@ -83,7 +71,6 @@ function NewsDetailPage() {
       }
     }
     fetchNews();
-    incrementViewCount();
     fetchReactions();
     fetchComments();
   }, [id]);
