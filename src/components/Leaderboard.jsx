@@ -52,7 +52,7 @@ export default function Leaderboard({ users = [] }) {
               >
                 <div className="relative">
                   <img
-                    src={user.image || "https://www.w3schools.com/howto/img_avatar.png"}
+                    src={user.image || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
                     alt={user.full_name}
                     onError={(e) => {
                       e.currentTarget.onerror = null; // evita bucle infinito
