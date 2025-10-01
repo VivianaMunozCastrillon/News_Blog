@@ -52,8 +52,12 @@ export default function Leaderboard({ users = [] }) {
               >
                 <div className="relative">
                   <img
-                    src={user.image}
+                    src={user.image || "https://www.w3schools.com/howto/img_avatar.png"}
                     alt={user.full_name}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null; // evita bucle infinito
+                      e.currentTarget.src = "https://www.w3schools.com/howto/img_avatar.png";
+                    }}
                     className={`rounded-full border-4 border-[#C0307F] object-cover
                       ${user.rank === 1 ? "w-24 h-24" : "w-20 h-20"}
                     `}
