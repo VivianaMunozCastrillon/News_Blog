@@ -1,46 +1,90 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { UserAuth } from '../context/AuthContext';
+import { useCategory } from '../context/CategoryContext';
+import { supabase } from '../supabase/supabaseClient'; 
 import SearchBar from './SearchBar';
 import Logo from '../assets/Logo_Notiplay.png';
 
-const Navbar = ({ onCategorySelect }) => {
+const Navbar = () => {
   const { user, signout } = UserAuth();
+  const { setSelectedCategory } = useCategory();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(null); 
+  const navigate = useNavigate();
+
+  const userName = user?.user_metadata?.name || 'Usuario';
+  const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=random`;
 
   const categories = [
-    { name: "Tecnología", path: "/categories/tecnologia" },
-    { name: "Ciencia", path: "/categories/ciencia" },
-    { name: "Deportes", path: "/categories/deportes" },
-    { name: "Entretenimiento", path: "/categories/entretenimiento" },
+    { name: "Tecnología" },
+    { name: "Ciencia" },
+    { name: "Deportes" },
+    { name: "Entretenimiento" },
   ];
+
+  // Traer la imagen desde tabla "users" o Google
+  useEffect(() => {
+    const fetchAvatar = async () => {
+      if (!user?.id) return;
+
+      // 1. Intentar traer imagen de la tabla "users"
+      const { data, error } = await supabase
+        .from("users")
+        .select("image")
+        .eq("id", user.id)
+        .single();
+
+      const imageFromDB = !error && data?.image ? data.image : null;
+
+      // 2. Intentar traer imagen de Google si no hay en la DB
+      const googleAvatar = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
+
+      // 3. Prioridad: DB > Google > Avatar por defecto
+      setAvatarUrl(imageFromDB || googleAvatar || defaultAvatar);
+    };
+
+    fetchAvatar();
+  }, [user]);
 
   const handleLogout = async () => {
     try {
       await signout();
+      window.location.reload();
     } catch (error) {
       console.error(error);
     }
   };
 
+  const handleCategoryClick = (name) => {
+    setSelectedCategory(name);
+    setIsMenuOpen(false);
+    navigate("/");
+  };
+
+  const handleGoHome = () => {
+    setSelectedCategory(null);
+    navigate("/");
+  };
+
   return (
     <nav className="bg-gradient-to-r from-black to-brand-pink shadow-md sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12"> 
+      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
         <div className="flex items-center justify-between h-20">
           
           {/* Logo */}
           <div className="flex-shrink-0">
-            <Link to="/">
+            <button onClick={handleGoHome}>
               <img src={Logo} alt="Notiplay Logo" className="h-12" />
-            </Link>
+            </button>
           </div>
 
           {/* Menú escritorio */}
           <div className="hidden md:flex items-center space-x-6">
-            <Link to="/" className="text-gray-200 hover:text-white transition-colors duration-300">Inicio</Link>
-
-            {/* Dropdown Categorías */}
+            <button onClick={handleGoHome} className="text-gray-200 hover:text-white transition-colors duration-300">
+              Inicio
+            </button>
             <div className="relative group">
               <button className="text-gray-200 hover:text-white transition-colors duration-300">
                 Categorías
@@ -49,7 +93,7 @@ const Navbar = ({ onCategorySelect }) => {
                 {categories.map((cat) => (
                   <button
                     key={cat.name}
-                    onClick={() => onCategorySelect(cat.name)}
+                    onClick={() => handleCategoryClick(cat.name)}
                     className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   >
                     {cat.name}
@@ -57,34 +101,43 @@ const Navbar = ({ onCategorySelect }) => {
                 ))}
               </div>
             </div>
-
-            <Link to="/dashboard" className="text-gray-200 hover:text-white transition-colors duration-300">Recompensas</Link>
+            <button onClick={() => navigate("/recompensas")} className="text-gray-200 hover:text-white transition-colors duration-300">
+              Recompensas
+            </button>
+            <SearchBar />
           </div>
 
-          {/* Perfil / Login */}
+          {/* Perfil / Login escritorio */}
           <div className="hidden md:flex items-center space-x-4">
-            <SearchBar />
             {user ? (
               <div className="relative">
                 <button onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)} className="flex items-center space-x-2">
-                  <img src={user.picture || `https://ui-avatars.com/api/?name=${user.name}&background=random`} alt="User" className="h-10 w-10 rounded-full" />
-                  <span className="text-gray-100 font-medium">{user.name}</span>
+                  <img
+                    src={avatarUrl}
+                    alt="Avatar de usuario"
+                    className="h-12 w-12 rounded-full border-2 border-white bg-gray-400 object-cover"
+                  />
+                  <span className="text-gray-100 font-medium">{userName}</span>
                 </button>
                 {isProfileMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1">
-                    <Link to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mi Perfil</Link>
-                    <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</button>
+                    <button onClick={() => { setIsProfileMenuOpen(false); navigate("/profile"); }} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      Mi Perfil
+                    </button>
+                    <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      Cerrar Sesión
+                    </button>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="flex items-center space-x-2">
-                <Link to="/login" className="text-white hover:underline transition-colors duration-300">Iniciar Sesión</Link>
-              </div>
+              <button onClick={() => navigate("/login")} className="text-white hover:underline transition-colors duration-300">
+                Iniciar Sesión
+              </button>
             )}
           </div>
 
-          {/* Mobile Menu */}
+          {/* Botón menú móvil */}
           <div className="md:hidden flex items-center">
             <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-gray-200 hover:text-white focus:outline-none">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -98,64 +151,41 @@ const Navbar = ({ onCategorySelect }) => {
       {/* Menú móvil */}
       {isMenuOpen && (
         <div className="md:hidden bg-gray-900 px-6 sm:px-8 lg:px-12 pt-2 pb-4 space-y-2">
-          <Link to="/" className="block text-gray-200 hover:text-white">Inicio</Link>
-
-          <MobileDropdown categories={categories} onCategorySelect={onCategorySelect} />
-
-          <Link to="/dashboard" className="block text-gray-200 hover:text-white">Dashboard</Link>
-
+          <button onClick={handleGoHome} className="block text-gray-200 hover:text-white w-full text-left">
+            Inicio
+          </button>
+          {categories.map((cat) => (
+            <button
+              key={cat.name}
+              onClick={() => handleCategoryClick(cat.name)}
+              className="block text-gray-200 hover:text-white w-full text-left"
+            >
+              {cat.name}
+            </button>
+          ))}
+          <button onClick={() => navigate("/recompensas")} className="block text-gray-200 hover:text-white w-full text-left">
+            Recompensas
+          </button>
+          <SearchBar />
           <div className="pt-4 border-t border-gray-700">
             {user ? (
-              <div className="relative">
-                <button onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)} className="flex items-center space-x-2">
-                  <img src={user.picture || `https://ui-avatars.com/api/?name=${user.name}&background=random`} alt="User" className="h-10 w-10 rounded-full" />
-                  <span className="text-gray-100 font-medium">{user.name}</span>
+              <div className="space-y-2">
+                <button onClick={() => navigate("/profile")} className="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-800">
+                  Mi Perfil
                 </button>
-                {isProfileMenuOpen && (
-                  <div className="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1">
-                    <Link to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mi Perfil</Link>
-                    <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</button>
-                  </div>
-                )}
+                <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-800">
+                  Cerrar Sesión
+                </button>
               </div>
             ) : (
-              <div className="flex flex-row space-x-2 justify-center">
-                <Link to="/login" className="text-white hover:underline text-center">Iniciar Sesión</Link>
-              </div>
+              <button onClick={() => navigate("/login")} className="text-white hover:underline text-center w-full">
+                Iniciar Sesión
+              </button>
             )}
           </div>
         </div>
       )}
     </nav>
-  );
-};
-
-// Dropdown móvil
-const MobileDropdown = ({ categories, onCategorySelect }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <div>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full text-left text-gray-200 hover:text-white"
-      >
-        Categorías
-      </button>
-      {isOpen && (
-        <div className="pl-4 mt-2 space-y-1">
-          {categories.map(cat => (
-            <button
-              key={cat.name}
-              onClick={() => onCategorySelect(cat.name)}
-              className="block w-full text-left text-gray-200 hover:text-white"
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
   );
 };
 

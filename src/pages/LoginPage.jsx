@@ -5,6 +5,7 @@ import Spinner from "../components/Spinner";
 import { useNavigate } from "react-router-dom";
 import { UserAuth } from "../context/AuthContext";
 import { FcGoogle } from "react-icons/fc";
+import ResetPasswordPage from "./ResetPasswordPage"; 
 
 function LoginPage({ defaultToRegister = false }) {
   const [isLoginMode, setIsLoginMode] = useState(!defaultToRegister);
@@ -46,7 +47,7 @@ function LoginPage({ defaultToRegister = false }) {
         await registerWithEmail(email, password, { name, lastname });
         setMessage("Usuario registrado correctamente");
         setMessageType("success");
-        navigate("/");
+        navigate("/survey");
       }
     } catch (error) {
       setMessage(error.message);

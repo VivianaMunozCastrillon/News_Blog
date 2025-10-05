@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 function LoginForm({ isLoginMode, setIsLoginMode, onSubmit, children }) {
   return (
@@ -83,13 +84,16 @@ function LoginForm({ isLoginMode, setIsLoginMode, onSubmit, children }) {
           />
         )}
 
-        {isLoginMode && (
-          <div className="text-right">
-            <a href="#" className="text-pink-500 text-xs hover:underline">
-              ¿Olvidaste la contraseña?
-            </a>
-          </div>
-        )}
+       {isLoginMode && (
+  <div className="text-right">
+    <Link
+      to="/reset-password"
+      className="text-pink-500 text-xs hover:underline"
+    >
+      ¿Olvidaste la contraseña?
+    </Link>
+  </div>
+)}
 
         <button className="w-full p-2 bg-gradient-to-r from-[#6f1652] via-pink-500 to-pink-300 text-white rounded-full text-sm font-medium hover:opacity-90 transition">
           {isLoginMode ? "Iniciar Sesión" : "Registrarse"}

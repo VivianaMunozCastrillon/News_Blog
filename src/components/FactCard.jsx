@@ -46,7 +46,7 @@ export default function FactCard() {
     if (facts.length > 0) {
       const interval = setInterval(() => {
         setCurrentIndex((prev) => (prev + 1) % facts.length);
-      }, 10000); // 👈 ahora cambia cada 10s
+      }, 10000); //ahora cambia cada 10s
       return () => clearInterval(interval);
     }
   }, [facts]);
@@ -69,16 +69,17 @@ export default function FactCard() {
 
   return (
     <div className="bg-white p-4 rounded shadow-md mb-6">
-      <h2 className="font-bold mb-2">¿Sabías que?</h2>
+      <h2 className="font-bold mb-2 text-lg">¿Sabías que?</h2>
 
       {/* Animación de fade entre datos */}
       <AnimatePresence mode="wait">
         <motion.p
-          key={facts[currentIndex].id} // 👈 clave única para que haga fade al cambiar
+          key={facts[currentIndex].id} // clave única para que haga fade al cambiar
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 3, ease: "easeInOut" }} // 👈 fade lento (3s)
+          transition={{ duration: 3, ease: "easeInOut" }} //fade lento (3s)
+          className="text-lg text-gray-700"
         >
           {facts[currentIndex].content}
         </motion.p>

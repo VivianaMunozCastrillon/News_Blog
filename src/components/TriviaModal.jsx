@@ -1,107 +1,101 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase/supabaseClient';
 import { CgClose } from 'react-icons/cg';
-import { UserAuth } from '../context/AuthContext'; // Importar UserAuth
+import { UserAuth } from '../context/AuthContext';
 
 const TriviaModal = ({ newsId, onClose }) => {
+  // --- ESTADOS DEL COMPONENTE ---
   const [trivia, setTrivia] = useState(null);
   const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [userAnswers, setUserAnswers] = useState({}); // Clave: Almacena las respuestas del usuario { questionId: answer }
   const [selectedOption, setSelectedOption] = useState(null);
   const [isCorrect, setIsCorrect] = useState(null);
-  const [score, setScore] = useState(0);
+  const [finalPoints, setFinalPoints] = useState(0); // Almacenará los puntos finales, no solo los aciertos
   const [showResult, setShowResult] = useState(false);
-  const { user } = UserAuth(); // Obtener el usuario del contexto
+  const { user } = UserAuth();
 
-  // Función para guardar la puntuación en la base de datos
-  const saveScore = async (finalScore) => {
-    if (!user) {
-      console.log("Usuario no logueado. No se guardará la puntuación.");
-      return;
-    }
-
-    try {
-      // 1. Obtener la puntuación actual del usuario
-      const { data: userData, error: userError } = await supabase
-        .from('users') // Corregido a 'users'
-        .select('points')
-        .eq('id', user.id)
-        .single();
-
-      if (userError && userError.code !== 'PGRST116') { // PGRST116: a row was not found
-        throw userError;
-      }
-
-      const currentPoints = userData?.points || 0;
-      const newTotalPoints = currentPoints + finalScore;
-
-      // 2. Actualizar la puntuación
-      const { error: updateError } = await supabase
-        .from('users') // Corregido a 'users'
-        .update({ points: newTotalPoints })
-        .eq('id', user.id);
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      console.log(`Puntuación guardada para ${user.id}. Nueva puntuación total: ${newTotalPoints}`);
-
-    } catch (error) {
-      console.error('Error al guardar la puntuación:', error.message);
-    }
-  };
-
+  // --- CARGA DE DATOS (Sin cambios, tu lógica era perfecta) ---
   useEffect(() => {
     const fetchTrivia = async () => {
       if (!newsId) return;
 
-      const { data: triviaData, error: triviaError } = await supabase
-        .from('trivia')
-        .select('id, title')
-        .eq('news_id', newsId);
+      try {
+        const { data: triviaData, error: triviaError } = await supabase
+          .from('trivia')
+          .select('id, title')
+          .eq('news_id', newsId)
+          .maybeSingle(); // .maybeSingle() es ideal aquí
 
-      if (triviaError) {
-        console.error('Error fetching trivia:', triviaError);
-        return;
-      }
+        if (triviaError) throw triviaError;
 
-      const currentTrivia = triviaData && triviaData.length > 0 ? triviaData[0] : null;
-      setTrivia(currentTrivia);
+        setTrivia(triviaData);
 
-      if (currentTrivia) {
-        const { data: questionsData, error: questionsError } = await supabase
-          .from('trivia_question')
-          .select('id, question_text, options, correct_option')
-          .eq('trivia_id', currentTrivia.id);
+        if (triviaData) {
+          const { data: questionsData, error: questionsError } = await supabase
+            .from('trivia_question')
+            .select('id, question_text, options, correct_option')
+            .eq('trivia_id', triviaData.id);
 
-        if (questionsError) {
-          console.error('Error fetching questions:', questionsError);
-        } else {
+          if (questionsError) throw questionsError;
           setQuestions(questionsData);
         }
+      } catch (error) {
+        console.error('Error al cargar la trivia:', error.message);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchTrivia();
   }, [newsId]);
 
-  // useEffect para guardar la puntuación cuando se muestran los resultados
-  useEffect(() => {
-    if (showResult && score > 0) {
-      saveScore(score);
-    }
-  }, [showResult]);
+  // --- FUNCIÓN CENTRAL PARA CALCULAR Y GUARDAR PUNTOS (Lógica Refactorizada) ---
+  const calculateAndSaveScore = async () => {
+    // 1. Calcular el número de respuestas correctas
+    let correctAnswersCount = 0;
+    questions.forEach((q) => {
+      if (userAnswers[q.id] === q.correct_option) {
+        correctAnswersCount++;
+      }
+    });
 
+    // 2. Aplicar la lógica de puntuación
+    const pointsPerCorrectAnswer = 5;
+    const bonusForAllCorrect = 10;
+    let calculatedPoints = correctAnswersCount * pointsPerCorrectAnswer;
+    const allCorrect = correctAnswersCount === questions.length && questions.length > 0;
+
+    if (allCorrect) {
+      calculatedPoints += bonusForAllCorrect;
+    }
+
+    setFinalPoints(calculatedPoints); // Actualiza el estado para la UI
+
+    // 3. Guardar los puntos usando la función RPC segura (si el usuario está logueado y ganó puntos)
+    if (user && calculatedPoints > 0) {
+      const { error } = await supabase.rpc('add_user_points', {
+        points_to_add: calculatedPoints,
+      });
+
+      if (error) {
+        console.error('Error al guardar la puntuación vía RPC:', error.message);
+      } else {
+        console.log(`¡${calculatedPoints} puntos guardados con éxito para ${user.id}!`);
+      }
+    }
+
+    // 4. Mostrar la pantalla de resultados
+    setShowResult(true);
+  };
+
+  // --- MANEJADORES DE INTERACCIÓN ---
   const handleOptionSelect = (option) => {
     setSelectedOption(option);
     const currentQuestion = questions[currentQuestionIndex];
-    if (option === currentQuestion.correct_option) {
-      setIsCorrect(true);
-      setScore(prevScore => prevScore + 1);
-    } else {
-      setIsCorrect(false);
-    }
+    setUserAnswers(prev => ({ ...prev, [currentQuestion.id]: option }));
+    setIsCorrect(option === currentQuestion.correct_option);
   };
 
   const handleNextQuestion = () => {
@@ -110,11 +104,22 @@ const TriviaModal = ({ newsId, onClose }) => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
-      setShowResult(true);
+      calculateAndSaveScore();
     }
   };
 
+  // --- RENDERIZADO ---
+  if (loading) {
+    // Pantalla de carga mientras se busca la trivia
+    return (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex justify-center items-center z-50">
+            <div className="bg-white p-8 rounded-lg shadow-2xl">Cargando trivia...</div>
+        </div>
+    );
+  }
+
   if (!trivia || questions.length === 0) {
+    // Pantalla si no hay trivia disponible
     return (
       <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex justify-center items-center z-50">
         <div className="relative bg-white p-8 rounded-lg shadow-2xl max-w-md w-full text-center">
@@ -176,8 +181,8 @@ const TriviaModal = ({ newsId, onClose }) => {
         ) : (
           <div className="text-center">
             <h2 className="text-3xl font-bold mb-4 text-gray-800">¡Trivia Completada!</h2>
-            <p className="text-xl text-gray-700">Tu puntuación: <span className="font-bold text-blue-500">{score} / {questions.length}</span></p>
-            {user && <p className="text-md text-gray-600 mt-2">¡Puntos añadidos a tu perfil!</p>}
+            <p className="text-xl text-gray-700">Has ganado: <span className="font-bold text-blue-500">{finalPoints} puntos</span></p>
+            {user && finalPoints > 0 && <p className="text-md text-gray-600 mt-2">¡Puntos añadidos a tu perfil!</p>}
             <button onClick={onClose} className="mt-8 px-6 py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600">
               Cerrar
             </button>

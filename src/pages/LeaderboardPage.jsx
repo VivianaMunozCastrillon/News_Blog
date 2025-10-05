@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Leaderboard from "../components/Leaderboard";
-import { fetchRankedUsers } from "../services/leaderboardService"; // 👈 donde pusiste la función
+import { fetchRankedUsers } from "../services/leaderboardService"; 
 
 export default function LeaderboardPage() {
   const [users, setUsers] = useState([]);

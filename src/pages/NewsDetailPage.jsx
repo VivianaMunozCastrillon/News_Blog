@@ -17,7 +17,7 @@ function NewsDetailPage() {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [notification, setNotification] = useState({ message: '', show: false, type: 'error' });
-
+  
   // Función para mostrar notificaciones y ocultarlas después de un tiempo
   const showNotification = (message, type = 'error') => {
     setNotification({ message, show: true, type });
@@ -54,6 +54,18 @@ function NewsDetailPage() {
   }
 
   useEffect(() => {
+    // Función para llamar al RPC que incrementa la vista
+    async function incrementViewCount() {
+      if (!id) return; // No hacer nada si no hay ID
+      const { error } = await supabase.rpc('increment_view_count', {
+        article_id: id,
+      });
+
+      if (error) {
+        console.error('Error incrementing view count:', error);
+      }
+    }
+
     async function fetchNews() {
       try {
         const { data, error } = await supabase
@@ -71,9 +83,26 @@ function NewsDetailPage() {
       }
     }
     fetchNews();
+    incrementViewCount();
     fetchReactions();
     fetchComments();
   }, [id]);
+  
+  useEffect(() => {
+  if (!user) return;
+
+  const updateActivity = async () => {
+    const { error } = await supabase.rpc("update_user_activity");
+    if (error) {
+      console.error("Error en update_user_activity:", error.message);
+    } else {
+      console.log("Actividad del usuario actualizada ✅");
+    }
+  };
+
+  updateActivity();
+}, [user]);
+
 
   async function handleReaction(reactionType) {
     if (!user) {

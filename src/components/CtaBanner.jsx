@@ -33,7 +33,7 @@ export default function CtaBanner() {
       className="text-white p-6 rounded mb-6 font-alata"
       style={{ backgroundColor: "#C0307F" }}
     >
-  <p className="text-sm font-bold">
+  <p className="text-xl font-bold ">
   <Typewriter
     words={messages}
     loop={true}
