@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 
 function Alert({ message, type = "info", duration = 3000, onClose }) {

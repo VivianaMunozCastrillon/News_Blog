@@ -66,17 +66,22 @@ function NewsPage() {
     <div className="w-full min-h-screen bg-gray-50">
       <Navbar />
 
-      {/* Layout principal con dos columnas */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 p-6">
-        
-        {/* Columna izquierda → Noticias */}
-        <main className="lg:col-span-3">
+      {/* Grid adaptable: 1 columna en móviles, 2 en tablets, 4 en desktop */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6">
+
+        {/* Noticias */}
+        <main className="md:col-span-1 lg:col-span-3">
           <div className="mb-6">
             <CtaBanner />
           </div>
 
           <div className="mb-6">
             <FactCard />
+          </div>
+
+          {/* Leaderboard en móviles justo después de banners */}
+          <div className="mb-6 md:hidden">
+            <LeaderboardPage />
           </div>
 
           <h1 className="text-2xl font-bold text-gray-800 p-4">
@@ -98,8 +103,8 @@ function NewsPage() {
           )}
         </main>
 
-        {/* Columna derecha → Leaderboard */}
-        <aside className="lg:col-span-1 hidden lg:block">
+        {/* Leaderboard en tablets y desktop */}
+        <aside className="hidden md:block lg:col-span-1">
           <LeaderboardPage />
         </aside>
       </div>

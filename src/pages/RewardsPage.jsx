@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabase/supabaseClient";
 import RewardCard from "../components/RewardCard";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 
 export default function RewardsPage({ user }) {
   const [rewards, setRewards] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [loadingRewards, setLoadingRewards] = useState(true);
+  const navigate = useNavigate();
 
   //Traer recompensas desde la BD + marcar canjeadas
   async function fetchRewards(userId) {
@@ -154,23 +157,32 @@ export default function RewardsPage({ user }) {
   }
 
   return (
-    <div className="p-6 min-h-screen bg-gray-200">
-      <h2 className="text-2xl font-bold mb-6">Recompensas</h2>
+  <div className="p-6 min-h-screen bg-gray-200 relative">
+  {/* Flecha flotante fija arriba */}
+  <div
+    onClick={() => navigate("/")}
+    className="fixed top-6 left-6 p-2 rounded-full bg-white shadow-md cursor-pointer hover:bg-pink-100 transition z-50"
+    title="Volver al inicio"
+  >
+    <ArrowLeft size={26} className="text-pink-600" />
+  </div>
 
-      {rewards.length === 0 ? (
-        <p className="text-gray-500">No hay recompensas disponibles.</p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {rewards.map((reward) => (
-            <RewardCard
-              key={reward.id}
-              reward={reward}
-              user={currentUser}
-              onRedeem={fetchUser}
-            />
-          ))}
-        </div>
-      )}
+  <h2 className="text-2xl font-bold mb-6 text-center">Recompensas</h2>
+
+  {rewards.length === 0 ? (
+    <p className="text-gray-500">No hay recompensas disponibles.</p>
+  ) : (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+      {rewards.map((reward) => (
+        <RewardCard
+          key={reward.id}
+          reward={reward}
+          user={currentUser}
+          onRedeem={fetchUser}
+        />
+      ))}
     </div>
-  );
+  )}
+</div>
+);
 }

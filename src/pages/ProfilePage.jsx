@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabase/supabaseClient";
 import { UserAuth } from "../context/AuthContext";
-import { Camera, Lock } from "lucide-react";
-import Spinner from "../components/Spinner"; 
+import { Camera, Lock, ArrowLeft } from "lucide-react";
+import Spinner from "../components/Spinner";
+import { useNavigate } from "react-router-dom";
 
 const allBadges = [
   { name: "Explorador", icon: "🧭", color: "from-blue-400 to-blue-600" },
@@ -14,6 +15,7 @@ const allBadges = [
 
 export default function MiPerfil() {
   const { user } = UserAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState({
     nombre: "",
     apellido: "",
@@ -22,7 +24,7 @@ export default function MiPerfil() {
     created_at: "",
   });
   const [userBadges, setUserBadges] = useState([]);
-  const [uploading, setUploading] = useState(false); 
+  const [uploading, setUploading] = useState(false);
 
   // Categorías
   const [categories, setCategories] = useState([]);
@@ -47,12 +49,113 @@ export default function MiPerfil() {
     if (!error && data) setProfile(data);
   }
 
+  // --- LÓGICA DE INSIGNIAS DIRECTAMENTE EN EL CLIENTE ---
+  async function checkAndAwardBadgesClientSide(userId, userPoints) {
+    console.log("Verificando insignias en el lado del cliente...");
+
+    // requisitos de las insignias
+    const badgesConfig = [
+      { name: "Explorador", points: 2000 },
+      { name: "Lector Constante", points: 4000 },
+      { name: "Lector Experto", points: 8000 },
+      { name: "Maestro Lector", points: 16000 },
+      { name: "Sabio de las Noticias", points: 32000 },
+    ];
+
+    try {
+      //Obtener las insignias que el usuario ya tiene
+      const { data: currentBadgesData, error: currentBadgesError } = await supabase
+        .from("user_badges")
+        .select("badge_name")
+        .eq("user_id", userId);
+
+      if (currentBadgesError) {
+        throw new Error("Error al obtener insignias actuales: " + currentBadgesError.message);
+      }
+      const currentUserBadges = currentBadgesData.map(b => b.badge_name);
+      
+      //Determinar qué nuevas insignias ha ganado el usuario
+      const newBadgesToAward = [];
+      for (const badge of badgesConfig) {
+        // Si el usuario tiene suficientes puntos Y aún no tiene la insignia...
+        if (userPoints >= badge.points && !currentUserBadges.includes(badge.name)) {
+          newBadgesToAward.push({
+            user_id: userId,
+            badge_name: badge.name,
+          });
+        }
+      }
+
+      //Si hay nuevas insignias, insertarlas en la base de datos
+      if (newBadgesToAward.length > 0) {
+        console.log("Otorgando nuevas insignias:", newBadgesToAward.map(b => b.badge_name));
+        const { error: insertError } = await supabase
+          .from("user_badges")
+          .insert(newBadgesToAward);
+
+        if (insertError) {
+          throw new Error("Error al guardar nuevas insignias: " + insertError.message);
+        }
+
+        //Actualizar el estado local para reflejar los cambios inmediatamente
+        setUserBadges([...currentUserBadges, ...newBadgesToAward.map(b => b.badge_name)]);
+      } else {
+        console.log("No hay nuevas insignias para otorgar.");
+      }
+
+    } catch (error) {
+      console.error(error.message);
+    }
+  }
+
+
+  useEffect(() => {
+    if (user) {
+      fetchProfile(user.id);
+      
+    }
+  }, [user]);
+
+  async function fetchProfile(userId) {
+  
+    const { data, error } = await supabase
+      .from("users")
+      .select("nombre, apellido, email, image, created_at, points") 
+      .eq("id", userId)
+      .single();
+
+    if (error) {
+      console.error("Error obteniendo perfil:", error.message);
+      return;
+    }
+
+    if (data) {
+      setProfile({
+        nombre: data.nombre || "",
+        apellido: data.apellido || "",
+        email: data.email || "",
+        image: data.image || "",
+        created_at: data.created_at || "",
+        points: data.points || 0,
+      });
+
+      // Una vez que tenemos los puntos, verificamos las insignias
+      await checkAndAwardBadgesClientSide(userId, data.points || 0);
+      
+      await fetchBadges(userId);
+    }
+  }
+  
+ 
   async function fetchBadges(userId) {
     const { data, error } = await supabase
       .from("user_badges")
       .select("badge_name")
       .eq("user_id", userId);
-    if (!error && data) setUserBadges(data.map((b) => b.badge_name));
+
+    if (!error && data) {
+      setUserBadges(data.map((b) => b.badge_name));
+    }
   }
 
   async function fetchCategories() {
@@ -152,8 +255,19 @@ export default function MiPerfil() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white to-gray-100 flex flex-col items-center py-10 px-4">
+    <div className="relative min-h-screen bg-gradient-to-br from-white to-gray-100 flex flex-col items-center py-10 px-4">
+
+      {/* Flecha en la esquina superior izquierda */}
+      <div
+        onClick={() => navigate("/")}
+        className="absolute top-6 left-6 p-2 rounded-full bg-white shadow-md cursor-pointer hover:bg-pink-100 transition"
+        title="Volver al inicio"
+      >
+        <ArrowLeft size={26} className="text-pink-600" />
+      </div>
+
       <div className="w-full max-w-3xl bg-gray-200 rounded-3xl shadow-lg p-8 space-y-10">
+
         {/* Cabecera */}
         <div className="flex flex-col items-center space-y-4">
           <div className="relative group">

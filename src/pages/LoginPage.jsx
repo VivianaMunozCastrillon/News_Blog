@@ -5,7 +5,6 @@ import Spinner from "../components/Spinner";
 import { useNavigate } from "react-router-dom";
 import { UserAuth } from "../context/AuthContext";
 import { FcGoogle } from "react-icons/fc";
-import ResetPasswordPage from "./ResetPasswordPage"; 
 
 function LoginPage({ defaultToRegister = false }) {
   const [isLoginMode, setIsLoginMode] = useState(!defaultToRegister);
@@ -16,40 +15,79 @@ function LoginPage({ defaultToRegister = false }) {
   const navigate = useNavigate();
   const { signInWithGoogle, loginWithEmail, registerWithEmail } = UserAuth();
 
+  // Validación email
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return { valid: false, message: "Formato de correo inválido" };
+
+    const allowedDomains = ["gmail.com", "yahoo.com", "hotmail.com"];
+    const domain = email.split("@")[1];
+    if (!allowedDomains.includes(domain)) return { valid: false, message: `Dominio ${domain} no permitido` };
+
+    return { valid: true };
+  };
+
+  // Validación password
+  const validatePassword = (password) => {
+    const errors = [];
+    if (password.length < 8) errors.push("Debe tener al menos 8 caracteres");
+    if (!/[a-z]/.test(password)) errors.push("Debe contener una letra minúscula");
+    if (!/[A-Z]/.test(password)) errors.push("Debe contener una letra mayúscula");
+    if (!/[0-9]/.test(password)) errors.push("Debe contener un número");
+    if (!/[!@#$%^&*()_+\-=[\]{};':"|<>?,./`~]/.test(password))
+      errors.push("Debe contener un carácter especial");
+    return errors;
+  };
+
   async function handleSubmit(e) {
     e.preventDefault();
     setMessage("");
     setLoading(true);
 
     const formData = new FormData(e.target);
-    const email = formData.get("email");
-    const password = formData.get("password");
-    const name = formData.get("name");
-    const lastname = formData.get("lastname");
+    const email = formData.get("email").trim();
+    const password = formData.get("password").trim();
+    const name = formData.get("name")?.trim();
+    const lastname = formData.get("lastname")?.trim();
 
-    //Autenticación nativa de Supabase (supabase.auth)
+    // Validación frontend
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      setMessage(emailValidation.message);
+      setMessageType("error");
+      setLoading(false);
+      return;
+    }
+
+    const pwErrors = validatePassword(password);
+    if (!isLoginMode && pwErrors.length > 0) {
+      setMessage(pwErrors.join(", "));
+      setMessageType("error");
+      setLoading(false);
+      return;
+    }
+
+    if (!isLoginMode && password !== formData.get("confirmPassword")) {
+      setMessage("Las contraseñas no coinciden");
+      setMessageType("error");
+      setLoading(false);
+      return;
+    }
+
     try {
       if (isLoginMode) {
-        // LOGIN
         await loginWithEmail(email, password);
         setMessage(`Bienvenido ${email}`);
         setMessageType("success");
         navigate("/");
       } else {
-        // REGISTRO
-        if (password !== formData.get("confirmPassword")) {
-          setMessage("Las contraseñas no coinciden");
-          setMessageType("error");
-          return;
-        }
-
-        // Registro con metadata
         await registerWithEmail(email, password, { name, lastname });
         setMessage("Usuario registrado correctamente");
         setMessageType("success");
         navigate("/survey");
       }
     } catch (error) {
+      // Mostrar mensaje de Supabase directamente
       setMessage(error.message);
       setMessageType("error");
     } finally {
@@ -60,7 +98,6 @@ function LoginPage({ defaultToRegister = false }) {
   async function handleGoogleSignIn() {
     try {
       await signInWithGoogle();
-      //navigate("/"); 
     } catch (error) {
       setMessage(error.message);
       setMessageType("error");
@@ -74,6 +111,8 @@ function LoginPage({ defaultToRegister = false }) {
           isLoginMode={isLoginMode}
           setIsLoginMode={setIsLoginMode}
           onSubmit={handleSubmit}
+          validateEmail={validateEmail}
+          validatePassword={validatePassword}
         >
           <div className="flex items-center my-4">
             <div className="flex-grow h-px bg-gray-300"></div>
@@ -100,7 +139,7 @@ function LoginPage({ defaultToRegister = false }) {
           <Alert
             message={message}
             type={messageType}
-            duration={2000}
+            duration={3000}
             onClose={() => setMessage("")}
           />
         </div>
