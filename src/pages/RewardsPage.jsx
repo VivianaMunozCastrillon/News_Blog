@@ -122,13 +122,13 @@ export default function RewardsPage({ user }) {
         </h2>
         <p className="text-gray-600 max-w-md">
           Debes iniciar sesión o registrarte para ver y canjear recompensas.
-        </p>
-        <a
-          href="/login"
+         </p>
+        <button
+          onClick={() => navigate("/login")}
           className="mt-6 bg-[#C0307F] text-white px-6 py-3 rounded-lg hover:bg-[#a5286a] transition-colors"
         >
           Iniciar sesión
-        </a>
+        </button>
       </div>
     );
   }
